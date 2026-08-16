@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, delete
+from sqlalchemy import desc, delete, func
 
 from database import (
     init_db,
@@ -217,6 +217,256 @@ def get_ward(ward_id: int, db: Session = Depends(get_db)):
         "baseline_pulse_score": ward.baseline_pulse_score,
         "pulse": pulse
     }
+
+
+# ---------------------------------------------------------------------------
+# Criteria Metrics & Updates API
+# ---------------------------------------------------------------------------
+
+@app.get("/api/metrics/{criteria}")
+def get_metrics_for_criteria(criteria: str, db: Session = Depends(get_db)):
+    if criteria not in ["traffic", "water", "air-quality", "sanitation"]:
+        raise HTTPException(status_code=400, detail="Invalid criteria name")
+
+    wards = db.query(Ward).order_by(Ward.id).all()
+    regions = []
+    total_val = 0.0
+    count = 0
+
+    for w in wards:
+        extra = {}
+        timestamp = datetime.utcnow().isoformat()
+        if criteria == "traffic":
+            r = db.query(TrafficReading).filter(TrafficReading.ward_id == w.id).order_by(desc(TrafficReading.timestamp)).first()
+            val = r.congestion_percentage if r else 0.0
+            extra = {
+                "vehicle_count": r.vehicle_count if r else 0,
+                "average_speed": r.average_speed if r else 0.0
+            }
+            timestamp = r.timestamp.isoformat() if r else timestamp
+        elif criteria == "water":
+            r = db.query(WaterReading).filter(WaterReading.ward_id == w.id).order_by(desc(WaterReading.timestamp)).first()
+            val = r.pressure if r else 80.0
+            extra = {
+                "flow_rate": r.flow_rate if r else 0.0,
+                "consumption": r.consumption if r else 0.0
+            }
+            timestamp = r.timestamp.isoformat() if r else timestamp
+        elif criteria == "air-quality":
+            r = db.query(AirQualityReading).filter(AirQualityReading.ward_id == w.id).order_by(desc(AirQualityReading.timestamp)).first()
+            val = r.aqi if r else 50.0
+            extra = {
+                "pm25": r.pm25 if r else 0.0,
+                "pm10": r.pm10 if r else 0.0
+            }
+            timestamp = r.timestamp.isoformat() if r else timestamp
+        elif criteria == "sanitation":
+            r = db.query(SanitationReading).filter(SanitationReading.ward_id == w.id).order_by(desc(SanitationReading.timestamp)).first()
+            val = r.garbage_fill_percentage if r else 0.0
+            extra = {
+                "collection_status": r.collection_status if r else "pending"
+            }
+            timestamp = r.timestamp.isoformat() if r else timestamp
+
+        total_val += val
+        count += 1
+        regions.append({
+            "ward_id": w.id,
+            "region_name": w.name,
+            "value": round(val, 1),
+            "timestamp": timestamp,
+            **extra
+        })
+
+    avg = round(total_val / count, 1) if count > 0 else 0.0
+
+    # Determine state mappings
+    if criteria == "traffic":
+        unit = "%"
+        if avg >= 70: status, status_class = "Gridlock", "status-text-critical"
+        elif avg >= 50: status, status_class = "Heavy", "status-text-high"
+        elif avg >= 35: status, status_class = "Moderate", "status-text-medium"
+        else: status, status_class = "Clear", "status-text-low"
+    elif criteria == "water":
+        unit = "PSI"
+        if avg <= 45: status, status_class = "Critical Drop", "status-text-critical"
+        elif avg <= 65: status, status_class = "Low Pressure", "status-text-high"
+        elif avg >= 95: status, status_class = "Overpressure", "status-text-medium"
+        else: status, status_class = "Stable", "status-text-stable"
+    elif criteria == "air-quality":
+        unit = "AQI"
+        if avg >= 200: status, status_class = "Hazardous", "status-text-critical"
+        elif avg >= 150: status, status_class = "Unhealthy", "status-text-high"
+        elif avg >= 100: status, status_class = "Poor", "status-text-medium"
+        else: status, status_class = "Good", "status-text-low"
+    else: # sanitation
+        unit = "%"
+        if avg >= 80: status, status_class = "Overflow Risk", "status-text-critical"
+        elif avg >= 60: status, status_class = "Warning Backlog", "status-text-high"
+        elif avg >= 40: status, status_class = "Moderate", "status-text-medium"
+        else: status, status_class = "Clean", "status-text-low"
+
+    return {
+        "criteria": criteria,
+        "average_value": avg,
+        "unit": unit,
+        "status": status,
+        "status_class": status_class,
+        "regions": regions
+    }
+
+
+@app.post("/api/metrics/refresh/{criteria}")
+async def refresh_criteria_metrics(criteria: str, db: Session = Depends(get_db)):
+    if criteria not in ["traffic", "water", "air-quality", "sanitation"]:
+        raise HTTPException(status_code=400, detail="Invalid criteria name")
+
+    import random
+    from datetime import datetime
+
+    # Get active scenario to check if we should simulate specific incident conditions
+    global ACTIVE_SCENARIO
+
+    wards = db.query(Ward).all()
+    for w in wards:
+        if criteria == "traffic":
+            if ACTIVE_SCENARIO == "traffic-aqi" and w.id == 7:
+                congestion = round(random.uniform(70.0, 95.0), 2)
+                speed = round(random.uniform(5.0, 15.0), 2)
+                vehicle_count = random.randint(500, 750)
+            else:
+                congestion = round(random.uniform(15.0, 50.0), 2)
+                speed = round(random.uniform(35.0, 55.0), 2)
+                vehicle_count = random.randint(100, 300)
+
+            reading = TrafficReading(
+                ward_id=w.id,
+                vehicle_count=vehicle_count,
+                congestion_percentage=congestion,
+                average_speed=speed,
+                timestamp=datetime.utcnow()
+            )
+            db.add(reading)
+            db.commit()
+            db.refresh(reading)
+            await handle_metric_anomaly(db, w.id, "traffic_congestion", reading.congestion_percentage)
+
+        elif criteria == "water":
+            if ACTIVE_SCENARIO == "water-pipeline" and w.id == 4:
+                pressure = round(random.uniform(30.0, 45.0), 2)
+                flow_rate = round(random.uniform(35.0, 50.0), 2)
+                consumption = round(random.uniform(8.0, 12.0), 2)
+            else:
+                pressure = round(random.uniform(75.0, 85.0), 2)
+                flow_rate = round(random.uniform(18.0, 22.0), 2)
+                consumption = round(random.uniform(15.0, 22.0), 2)
+
+            reading = WaterReading(
+                ward_id=w.id,
+                pressure=pressure,
+                flow_rate=flow_rate,
+                consumption=consumption,
+                timestamp=datetime.utcnow()
+            )
+            db.add(reading)
+            db.commit()
+            db.refresh(reading)
+            await handle_metric_anomaly(db, w.id, "water_pressure", reading.pressure)
+            await handle_metric_anomaly(db, w.id, "water_flow", reading.flow_rate)
+
+        elif criteria == "air-quality":
+            if ACTIVE_SCENARIO == "traffic-aqi" and w.id == 7:
+                aqi = round(random.uniform(180.0, 250.0), 2)
+                pm25 = round(random.uniform(70.0, 95.0), 2)
+                pm10 = round(random.uniform(130.0, 170.0), 2)
+            else:
+                aqi = round(random.uniform(50.0, 110.0), 2)
+                pm25 = round(random.uniform(15.0, 35.0), 2)
+                pm10 = round(random.uniform(30.0, 70.0), 2)
+
+            reading = AirQualityReading(
+                ward_id=w.id,
+                aqi=aqi,
+                pm25=pm25,
+                pm10=pm10,
+                timestamp=datetime.utcnow()
+            )
+            db.add(reading)
+            db.commit()
+            db.refresh(reading)
+            await handle_metric_anomaly(db, w.id, "aqi", reading.aqi)
+
+        elif criteria == "sanitation":
+            if ACTIVE_SCENARIO == "sanitation" and w.id == 2:
+                fill = round(random.uniform(85.0, 98.0), 2)
+                status = "pending"
+            else:
+                fill = round(random.uniform(20.0, 60.0), 2)
+                status = random.choice(["pending", "completed"])
+
+            reading = SanitationReading(
+                ward_id=w.id,
+                garbage_fill_percentage=fill,
+                collection_status=status,
+                timestamp=datetime.utcnow()
+            )
+            db.add(reading)
+            db.commit()
+            db.refresh(reading)
+            await handle_metric_anomaly(db, w.id, "sanitation_fill", reading.garbage_fill_percentage)
+
+        # Run correlation checks for this ward
+        new_correlations = run_correlation_checks(db, w.id)
+        for c in new_correlations:
+            await ws_manager.broadcast({
+                "type": "ALERT_TRIGGERED",
+                "data": {
+                    "id": c.id,
+                    "ward_id": c.ward_id,
+                    "ward_name": c.ward.name,
+                    "type": c.type,
+                    "severity": c.severity,
+                    "title": c.title,
+                    "description": c.description,
+                    "confidence": c.confidence,
+                    "contributing_factors": json.loads(c.contributing_factors),
+                    "recommended_actions": json.loads(c.recommended_actions),
+                    "timestamp": c.timestamp.isoformat()
+                }
+            })
+
+        # Broadcast update for ward pulse and metrics
+        pulse = calculate_pulse_for_ward(db, w.id)
+        await ws_manager.broadcast({
+            "type": "METRIC_UPDATE",
+            "data": {
+                "ward_id": w.id,
+                "metric": criteria.replace("-", "_"),
+                "values": {
+                    "congestion_percentage": reading.congestion_percentage if criteria == "traffic" else 0.0,
+                    "vehicle_count": reading.vehicle_count if criteria == "traffic" else 0,
+                    "average_speed": reading.average_speed if criteria == "traffic" else 0.0,
+                    "pressure": reading.pressure if criteria == "water" else 0.0,
+                    "flow_rate": reading.flow_rate if criteria == "water" else 0.0,
+                    "consumption": reading.consumption if criteria == "water" else 0.0,
+                    "aqi": reading.aqi if criteria == "air-quality" else 0.0,
+                    "pm25": reading.pm25 if criteria == "air-quality" else 0.0,
+                    "pm10": reading.pm10 if criteria == "air-quality" else 0.0,
+                    "garbage_fill_percentage": reading.garbage_fill_percentage if criteria == "sanitation" else 0.0,
+                    "collection_status": reading.collection_status if criteria == "sanitation" else "pending",
+                },
+                "pulse": pulse
+            }
+        })
+
+    # Trigger automatic updates for insights
+    insights_res = get_ai_insights(db)
+    await ws_manager.broadcast({
+        "type": "INSIGHTS_UPDATE",
+        "data": insights_res
+    })
+
+    return get_metrics_for_criteria(criteria, db)
 
 
 # ---------------------------------------------------------------------------

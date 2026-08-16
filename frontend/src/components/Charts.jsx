@@ -37,37 +37,38 @@ export function PulseTrendChart({ data }) {
         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
           <defs>
             <linearGradient id="colorPulse" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.0} />
+              <stop offset="5%" stopColor="#0284c7" stopOpacity={0.25} />
+              <stop offset="95%" stopColor="#0284c7" stopOpacity={0.0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(15, 23, 42, 0.08)" />
           <XAxis 
             dataKey="time" 
-            stroke="#64748b" 
+            stroke="#475569" 
             fontSize={10} 
             tickLine={false}
           />
           <YAxis 
             domain={[30, 100]} 
-            stroke="#64748b" 
+            stroke="#475569" 
             fontSize={10} 
             tickLine={false}
             axisLine={false}
           />
           <Tooltip
             contentStyle={{
-              background: "#0f172a",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
               borderRadius: "6px",
-              fontSize: "11px",
-              color: "#f1f5f9"
+              fontSize: "12px",
+              color: "#0f172a",
+              boxShadow: "0 4px 12px rgba(15, 23, 42, 0.08)"
             }}
           />
           <Area
             type="monotone"
             dataKey="score"
-            stroke="#38bdf8"
+            stroke="#0284c7"
             strokeWidth={2}
             fillOpacity={1}
             fill="url(#colorPulse)"
@@ -82,8 +83,8 @@ export function PulseTrendChart({ data }) {
 export function DomainComparisonChart({ breakdown }) {
   if (!breakdown) {
     return (
-      <div style={{ display: "flex", height: 160, alignItems: "center", justifyContent: "center", color: "#64748b", fontSize: "12px" }}>
-        No ward selected to view breakdown.
+      <div style={{ display: "flex", height: 160, alignItems: "center", justifyContent: "center", color: "#475569", fontSize: "12px" }}>
+        No region selected to view breakdown.
       </div>
     );
   }
@@ -105,11 +106,11 @@ export function DomainComparisonChart({ breakdown }) {
           layout="vertical"
           margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(15, 23, 42, 0.08)" horizontal={false} />
           <XAxis 
             type="number" 
             domain={[0, 100]} 
-            stroke="#64748b" 
+            stroke="#475569" 
             fontSize={9} 
             tickLine={false}
             axisLine={false}
@@ -117,19 +118,20 @@ export function DomainComparisonChart({ breakdown }) {
           <YAxis 
             dataKey="name" 
             type="category" 
-            stroke="#94a3b8" 
-            fontSize={10} 
+            stroke="#334155" 
+            fontSize={11} 
             tickLine={false}
             width={75}
           />
           <Tooltip
-            cursor={{ fill: "rgba(255, 255, 255, 0.02)" }}
+            cursor={{ fill: "rgba(15, 23, 42, 0.02)" }}
             contentStyle={{
-              background: "#0f172a",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
               borderRadius: "6px",
-              fontSize: "11px",
-              color: "#f1f5f9"
+              fontSize: "12px",
+              color: "#0f172a",
+              boxShadow: "0 4px 12px rgba(15, 23, 42, 0.08)"
             }}
           />
           <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={10}>

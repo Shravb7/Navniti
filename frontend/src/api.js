@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://localhost:8000/api";
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -16,4 +16,6 @@ export const api = {
   getComplaints: () => request("/complaints?limit=20"),
   submitComplaint: (ward_id, text) =>
     request("/complaints", { method: "POST", body: JSON.stringify({ ward_id, text }) }),
+  getMetrics: (criteria) => request(`/metrics/${criteria}`),
+  refreshMetrics: (criteria) => request(`/metrics/refresh/${criteria}`, { method: "POST" }),
 };

@@ -37,16 +37,16 @@ Base = declarative_base()
 
 # Seed Ward Data (10 wards representing Nagpur, India area for a tight coordinate cluster)
 SEED_WARDS = [
-    {"id": 1, "name": "Ward 1 - Civil Lines", "latitude": 21.150, "longitude": 79.080, "population": 120000, "baseline_pulse_score": 95.0},
-    {"id": 2, "name": "Ward 2 - Sadar", "latitude": 21.160, "longitude": 79.090, "population": 95000, "baseline_pulse_score": 92.0},
-    {"id": 3, "name": "Ward 3 - Dharampeth", "latitude": 21.140, "longitude": 79.070, "population": 110000, "baseline_pulse_score": 94.0},
-    {"id": 4, "name": "Ward 4 - Sitabuldi", "latitude": 21.145, "longitude": 79.085, "population": 85000, "baseline_pulse_score": 90.0},
-    {"id": 5, "name": "Ward 5 - Ramdaspeth", "latitude": 21.135, "longitude": 79.080, "population": 70000, "baseline_pulse_score": 93.0},
-    {"id": 6, "name": "Ward 6 - Wardhaman Nagar", "latitude": 21.155, "longitude": 79.120, "population": 130000, "baseline_pulse_score": 88.0},
-    {"id": 7, "name": "Ward 7 - Trimurti Nagar", "latitude": 21.120, "longitude": 79.050, "population": 105000, "baseline_pulse_score": 91.0},
-    {"id": 8, "name": "Ward 8 - Manish Nagar", "latitude": 21.090, "longitude": 79.090, "population": 90000, "baseline_pulse_score": 89.0},
-    {"id": 9, "name": "Ward 9 - Nandanvan", "latitude": 21.138, "longitude": 79.115, "population": 115000, "baseline_pulse_score": 90.0},
-    {"id": 10, "name": "Ward 10 - Gandhibagh", "latitude": 21.150, "longitude": 79.100, "population": 140000, "baseline_pulse_score": 86.0},
+    {"id": 1, "name": "Civil Lines", "latitude": 21.150, "longitude": 79.080, "population": 120000, "baseline_pulse_score": 95.0},
+    {"id": 2, "name": "Sadar", "latitude": 21.160, "longitude": 79.090, "population": 95000, "baseline_pulse_score": 92.0},
+    {"id": 3, "name": "Dharampeth", "latitude": 21.140, "longitude": 79.070, "population": 110000, "baseline_pulse_score": 94.0},
+    {"id": 4, "name": "Sitabuldi", "latitude": 21.145, "longitude": 79.085, "population": 85000, "baseline_pulse_score": 90.0},
+    {"id": 5, "name": "Ramdaspeth", "latitude": 21.135, "longitude": 79.080, "population": 70000, "baseline_pulse_score": 93.0},
+    {"id": 6, "name": "Wardhaman Nagar", "latitude": 21.155, "longitude": 79.120, "population": 130000, "baseline_pulse_score": 88.0},
+    {"id": 7, "name": "Trimurti Nagar", "latitude": 21.120, "longitude": 79.050, "population": 105000, "baseline_pulse_score": 91.0},
+    {"id": 8, "name": "Manish Nagar", "latitude": 21.090, "longitude": 79.090, "population": 90000, "baseline_pulse_score": 89.0},
+    {"id": 9, "name": "Nandanvan", "latitude": 21.138, "longitude": 79.115, "population": 115000, "baseline_pulse_score": 90.0},
+    {"id": 10, "name": "Gandhibagh", "latitude": 21.150, "longitude": 79.100, "population": 140000, "baseline_pulse_score": 86.0},
 ]
 
 

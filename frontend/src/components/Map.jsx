@@ -75,35 +75,35 @@ export default function WardMap({ wards, pulses, selectedWardId, onSelectWard })
             >
               <Popup>
                 <div style={{ pointerEvents: "auto" }}>
-                  <h3 style={{ margin: "0 0 6px 0", color: "#f1f5f9", fontWeight: 700, fontSize: "14px" }}>
+                  <h3 style={{ margin: "0 0 6px 0", color: "var(--text-main)", fontWeight: 700, fontSize: "14px" }}>
                     {ward.name}
                   </h3>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "4px 0" }}>
                     <span
                       style={{
-                        background: color + "20",
+                        background: color + "15",
                         color: color,
-                        border: `1px solid ${color}40`,
-                        padding: "2px 6px",
+                        border: `1px solid ${color}35`,
+                        padding: "3.5px 7px",
                         borderRadius: "4px",
                         fontSize: "12px",
                         fontWeight: 700,
-                        fontFamily: "Orbitron, monospace"
+                        fontFamily: "var(--font-sans)"
                       }}
                     >
                       PULSE: {score.toFixed(0)}/100
                     </span>
-                    <span style={{ fontSize: "11px", color: "#94a3b8" }}>
+                    <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: 500 }}>
                       Pop: {(ward.population / 1000).toFixed(0)}k
                     </span>
                   </div>
                   
                   {pulse?.raw_values && (
-                    <div style={{ marginTop: "10px", fontSize: "11px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", color: "#cbd5e1" }}>
-                      <div>🚦 Congestion: {pulse.raw_values.congestion.toFixed(0)}%</div>
-                      <div>🌬️ AQI: {pulse.raw_values.aqi.toFixed(0)}</div>
-                      <div>💧 Pressure: {pulse.raw_values.pressure.toFixed(0)} PSI</div>
-                      <div>🗑️ Trash Fill: {pulse.raw_values.garbage_fill.toFixed(0)}%</div>
+                    <div style={{ marginTop: "10px", fontSize: "11.5px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", color: "var(--text-muted)" }}>
+                      <div>🚦 Traffic: {pulse.raw_values.congestion.toFixed(0)}%</div>
+                      <div>🌬️ Air (AQI): {pulse.raw_values.aqi.toFixed(0)}</div>
+                      <div>💧 Water: {pulse.raw_values.pressure.toFixed(0)} PSI</div>
+                      <div>🗑️ Trash: {pulse.raw_values.garbage_fill.toFixed(0)}%</div>
                     </div>
                   )}
 
@@ -111,35 +111,35 @@ export default function WardMap({ wards, pulses, selectedWardId, onSelectWard })
                     <div
                       style={{
                         marginTop: "8px",
-                        fontSize: "10px",
-                        color: "#ef4444",
-                        fontWeight: 600,
-                        background: "rgba(239, 68, 68, 0.1)",
+                        fontSize: "11px",
+                        color: "var(--color-critical)",
+                        fontWeight: 700,
+                        background: "rgba(185, 28, 28, 0.08)",
                         padding: "3px 6px",
                         borderRadius: "3px"
                       }}
                     >
-                      ⚠️ {pulse.raw_values.complaints_count} Active Complaints
+                      ⚠️ {pulse.raw_values.complaints_count} Active Reports
                     </div>
                   )}
                   
                   <button
                     onClick={() => onSelectWard(ward.id)}
                     style={{
-                      marginTop: "10px",
+                      marginTop: "12px",
                       width: "100%",
-                      padding: "5px",
-                      background: "#38bdf8",
+                      padding: "6px",
+                      background: "#0284c7",
                       border: "none",
-                      borderRadius: "4px",
-                      color: "#0f172a",
-                      fontSize: "11px",
+                      borderRadius: "6px",
+                      color: "#ffffff",
+                      fontSize: "12px",
                       fontWeight: 700,
                       cursor: "pointer",
                       textAlign: "center"
                     }}
                   >
-                    FOCUS WARD
+                    FOCUS REGION
                   </button>
                 </div>
               </Popup>

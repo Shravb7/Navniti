@@ -48,6 +48,12 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [pulseTrend, setPulseTrend] = useState([]);
   
+  // Accessibility and criteria states
+  const [isTextScaleLarge, setIsTextScaleLarge] = useState(false);
+  const [selectedCriteria, setSelectedCriteria] = useState(null);
+  const [criteriaDetails, setCriteriaDetails] = useState(null);
+  const [isRefreshingCriteria, setIsRefreshingCriteria] = useState(false);
+
   // Complaint submission form state
   const [complaintWardId, setComplaintWardId] = useState(7);
   const [complaintText, setComplaintText] = useState("");
@@ -55,6 +61,51 @@ export default function App() {
   const [lastClassificationResult, setLastClassificationResult] = useState(null);
 
   const wsRef = useRef(null);
+
+  // Sync criteria details whenever selected criteria changes
+  useEffect(() => {
+    if (selectedCriteria) {
+      if (selectedCriteria === "pulse") {
+        setCriteriaDetails(null);
+      } else {
+        fetch(`${API_BASE}/metrics/${selectedCriteria}`)
+          .then(res => res.ok ? res.json() : null)
+          .then(setCriteriaDetails)
+          .catch(err => console.error("Error loading criteria: ", err));
+      }
+    } else {
+      setCriteriaDetails(null);
+    }
+  }, [selectedCriteria]);
+
+  // Handle manual database scan/refresh for a specific criteria
+  const handleRefreshCriteria = async (criteria) => {
+    setIsRefreshingCriteria(true);
+    try {
+      const res = await fetch(`${API_BASE}/metrics/refresh/${criteria}`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setCriteriaDetails(data);
+        showToast(
+          "Telemetry Refreshed", 
+          `Scanned database and retrieved live updates for Nagpur ${criteria} status.`, 
+          "LOW"
+        );
+        // Reload global states
+        fetchInitialData();
+      } else {
+        showToast("Refresh Failed", "Could not query database sensor tables.", "CRITICAL");
+      }
+    } catch (err) {
+      showToast("Refresh Failed", "Check your backend connection status.", "CRITICAL");
+    } finally {
+      setIsRefreshingCriteria(false);
+    }
+  };
+
+  const closeCriteriaDrawer = () => {
+    setSelectedCriteria(null);
+  };
 
   // Show floating toast notifications for active alerts
   const showToast = (title, desc, severity) => {
@@ -333,7 +384,7 @@ export default function App() {
   const sanitationStatus = getSanitationStatus(currentAverages.garbage_fill);
 
   return (
-    <div className="dashboard-container">
+    <div className={`dashboard-container ${isTextScaleLarge ? "text-scale-large" : ""}`}>
       
       {/* 1. HEADER CONTROL LAYER */}
       <header className="dashboard-header">
@@ -341,41 +392,70 @@ export default function App() {
           <div className="brand-logo-container">
             <h1 className="brand-logo">NAVNITI</h1>
           </div>
-          <div style={{ borderLeft: "1px solid rgba(255,255,255,0.1)", paddingLeft: "14px" }}>
-            <span className="brand-tagline">AI-Powered Digital Nervous System for Proactive Urban Governance</span>
+          <div style={{ borderLeft: "1px solid var(--border-muted)", paddingLeft: "14px" }}>
+            <span className="brand-tagline">Proactive Smart City Command Dashboard (Nagpur)</span>
           </div>
         </div>
 
-        {/* Demo incident control panel */}
-        <div className="demo-bar">
-          <span className="demo-title">
-            <Sliders size={11} style={{ marginRight: "4px" }} />
-            Demo Scenario Controller:
-          </span>
+        {/* Accessibility & Refresh bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          
+          {/* Elderly Accessibility Font Size Toggle */}
           <button 
-            className={`demo-btn ${activeScenario === "normal" ? "active" : ""}`}
-            onClick={() => handleTriggerScenario("normal")}
+            type="button"
+            onClick={() => setIsTextScaleLarge(!isTextScaleLarge)}
+            style={{
+              background: isTextScaleLarge ? "#0284c7" : "#ffffff",
+              color: isTextScaleLarge ? "#ffffff" : "var(--text-main)",
+              border: "1px solid var(--border-muted)",
+              borderRadius: "20px",
+              padding: "6px 14px",
+              fontSize: "11px",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+            }}
+            title="Switch text size for elderly readability"
           >
-            Normal City
+            <span>Aa</span>
+            <span>{isTextScaleLarge ? "NORMAL SIZE" : "LARGE TEXT"}</span>
           </button>
-          <button 
-            className={`demo-btn ${activeScenario === "traffic-aqi" ? "active" : ""}`}
-            onClick={() => handleTriggerScenario("traffic-aqi")}
-          >
-            🚦 Traffic + AQI
-          </button>
-          <button 
-            className={`demo-btn ${activeScenario === "water-pipeline" ? "active" : ""}`}
-            onClick={() => handleTriggerScenario("water-pipeline")}
-          >
-            💧 Pipeline Leak
-          </button>
-          <button 
-            className={`demo-btn ${activeScenario === "sanitation" ? "active" : ""}`}
-            onClick={() => handleTriggerScenario("sanitation")}
-          >
-            🗑️ Garbage Overflow
-          </button>
+
+          {/* Demo incident control panel */}
+          <div className="demo-bar">
+            <span className="demo-title">
+              <Sliders size={11} style={{ marginRight: "4px" }} />
+              Scenarios:
+            </span>
+            <button 
+              className={`demo-btn ${activeScenario === "normal" ? "active" : ""}`}
+              onClick={() => handleTriggerScenario("normal")}
+            >
+              Standard Baseline
+            </button>
+            <button 
+              className={`demo-btn ${activeScenario === "traffic-aqi" ? "active" : ""}`}
+              onClick={() => handleTriggerScenario("traffic-aqi")}
+            >
+              🚦 Traffic Gridlock
+            </button>
+            <button 
+              className={`demo-btn ${activeScenario === "water-pipeline" ? "active" : ""}`}
+              onClick={() => handleTriggerScenario("water-pipeline")}
+            >
+              💧 Pipe Leak
+            </button>
+            <button 
+              className={`demo-btn ${activeScenario === "sanitation" ? "active" : ""}`}
+              onClick={() => handleTriggerScenario("sanitation")}
+            >
+              🗑️ Trash Overflow
+            </button>
+          </div>
+
         </div>
 
         {/* Live heartbeat status */}
@@ -389,24 +469,32 @@ export default function App() {
       <section className="kpi-row">
         
         {/* City Pulse Average */}
-        <div className="kpi-card pulse-highlight">
+        <div 
+          className={`kpi-card pulse-highlight ${selectedCriteria === "pulse" ? "selected-kpi" : ""}`}
+          onClick={() => setSelectedCriteria("pulse")}
+          title="Click to view weights and score definitions"
+        >
           <div className="kpi-header">
             <span className="kpi-title">CITY PULSE SCORE</span>
-            <Activity className="kpi-icon" size={16} color="#38bdf8" />
+            <Activity className="kpi-icon" size={16} color="#0284c7" />
           </div>
           <div className="kpi-value-container">
-            <span className="kpi-value" style={{ textShadow: "0 0 10px rgba(56, 189, 248, 0.3)" }}>
+            <span className="kpi-value">
               {insights.city_pulse}
             </span>
             <span className="kpi-unit">/100</span>
           </div>
           <span className={`kpi-status-label ${insights.overall_status === "STABLE" ? "status-text-stable" : "status-text-critical"}`} style={{ fontSize: "12px", fontWeight: 700 }}>
-            {insights.overall_status}
+            {insights.overall_status} (Click to see weight breakdown)
           </span>
         </div>
 
         {/* Traffic Average */}
-        <div className="kpi-card">
+        <div 
+          className={`kpi-card ${selectedCriteria === "traffic" ? "selected-kpi" : ""}`}
+          onClick={() => setSelectedCriteria("traffic")}
+          title="Click to see traffic scores by area and scan for updates"
+        >
           <div className="kpi-header">
             <span className="kpi-title">TRAFFIC CONGESTION</span>
             <Navigation className="kpi-icon" size={16} />
@@ -415,12 +503,16 @@ export default function App() {
             <span className="kpi-value">{currentAverages.congestion}%</span>
           </div>
           <span className={`kpi-status-label ${trafficStatus.class}`}>
-            {trafficStatus.label}
+            {trafficStatus.label} (Click for Nagpur area scores)
           </span>
         </div>
 
         {/* AQI Average */}
-        <div className="kpi-card">
+        <div 
+          className={`kpi-card ${selectedCriteria === "air-quality" ? "selected-kpi" : ""}`}
+          onClick={() => setSelectedCriteria("air-quality")}
+          title="Click to see air quality scores by area and scan for updates"
+        >
           <div className="kpi-header">
             <span className="kpi-title">AIR QUALITY INDEX</span>
             <Flame className="kpi-icon" size={16} />
@@ -430,12 +522,16 @@ export default function App() {
             <span className="kpi-unit">AQI</span>
           </div>
           <span className={`kpi-status-label ${aqiStatus.class}`}>
-            {aqiStatus.label}
+            {aqiStatus.label} (Click for Nagpur area scores)
           </span>
         </div>
 
         {/* Water Average */}
-        <div className="kpi-card">
+        <div 
+          className={`kpi-card ${selectedCriteria === "water" ? "selected-kpi" : ""}`}
+          onClick={() => setSelectedCriteria("water")}
+          title="Click to see water pressures by area and scan for updates"
+        >
           <div className="kpi-header">
             <span className="kpi-title">WATER PIPELINES</span>
             <Droplets className="kpi-icon" size={16} />
@@ -445,12 +541,16 @@ export default function App() {
             <span className="kpi-unit">PSI</span>
           </div>
           <span className={`kpi-status-label ${waterStatus.class}`}>
-            {waterStatus.label}
+            {waterStatus.label} (Click for Nagpur area scores)
           </span>
         </div>
 
         {/* Sanitation Average */}
-        <div className="kpi-card">
+        <div 
+          className={`kpi-card ${selectedCriteria === "sanitation" ? "selected-kpi" : ""}`}
+          onClick={() => setSelectedCriteria("sanitation")}
+          title="Click to see trash bin fills by area and scan for updates"
+        >
           <div className="kpi-header">
             <span className="kpi-title">SANITATION FILL</span>
             <Trash2 className="kpi-icon" size={16} />
@@ -459,12 +559,19 @@ export default function App() {
             <span className="kpi-value">{currentAverages.garbage_fill}%</span>
           </div>
           <span className={`kpi-status-label ${sanitationStatus.class}`}>
-            {sanitationStatus.label}
+            {sanitationStatus.label} (Click for Nagpur area scores)
           </span>
         </div>
 
         {/* Open Complaints count */}
-        <div className="kpi-card">
+        <div 
+          className="kpi-card"
+          onClick={() => {
+            const el = document.querySelector(".complaint-list");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }}
+          title="Click to scroll to the reports feed"
+        >
           <div className="kpi-header">
             <span className="kpi-title">OPEN COMPLAINTS</span>
             <FileText className="kpi-icon" size={16} />
@@ -472,8 +579,8 @@ export default function App() {
           <div className="kpi-value-container">
             <span className="kpi-value">{insights.open_complaints_count}</span>
           </div>
-          <span className="kpi-status-label text-dim" style={{ color: "#38bdf8", fontWeight: 500 }}>
-            {insights.duplicate_complaints_prevented} Grouped Clusters
+          <span className="kpi-status-label text-dim" style={{ color: "#0284c7", fontWeight: 700 }}>
+            {insights.duplicate_complaints_prevented} Grouped Clusters (Go to log)
           </span>
         </div>
 
@@ -746,15 +853,135 @@ export default function App() {
         ))}
       </div>
 
+      {/* 5. CRITERIA DETAIL SLIDE-OUT DRAWER */}
+      <div className={`criteria-drawer-overlay ${selectedCriteria ? "active" : ""}`}>
+        {selectedCriteria && (
+          <>
+            <div className="criteria-drawer-header">
+              <div className="criteria-drawer-title-container">
+                <span className="criteria-drawer-title">
+                  {selectedCriteria === "traffic" && "🚦 Traffic Congestion Updates"}
+                  {selectedCriteria === "air-quality" && "🌬️ Air Quality Updates"}
+                  {selectedCriteria === "water" && "💧 Water Pipeline Updates"}
+                  {selectedCriteria === "sanitation" && "🗑️ Sanitation bin Updates"}
+                  {selectedCriteria === "pulse" && "📈 City Health Score Details"}
+                </span>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Detailed overview and manual database refresh portal
+                </span>
+              </div>
+              <button className="criteria-drawer-close" onClick={closeCriteriaDrawer}>
+                &times;
+              </button>
+            </div>
+
+            {selectedCriteria === "pulse" ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ background: "#f1f5f9", padding: "16px", borderRadius: "10px", border: "1px solid var(--border-muted)" }}>
+                  <h4 style={{ margin: "0 0 8px 0", fontSize: "14px" }}>What is City Pulse Score?</h4>
+                  <p style={{ fontSize: "12.5px", lineHeight: "1.5", color: "var(--text-muted)", margin: 0 }}>
+                    The City Pulse Score is a real-time health indicator calculated out of 100. It computes a weighted average of key metrics (Traffic 25%, AQI 25%, Water 20%, Sanitation 15%, Citizen Complaints 15%) across all neighborhoods.
+                  </p>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <h4 style={{ margin: "0", fontSize: "13px", fontWeight: 700 }}>Weighted Criteria Breakdown:</h4>
+                  <div style={{ fontSize: "12px", display: "grid", gridTemplateColumns: "1fr auto", gap: "8px" }}>
+                    <span>🚦 Road Traffic Congestion</span><strong>25% weight</strong>
+                    <span>🌬️ Ambient Air Quality Index (AQI)</span><strong>25% weight</strong>
+                    <span>💧 Mainline Water Pressure & Flow</span><strong>20% weight</strong>
+                    <span>🗑️ Sanitation Bin Fill Levels</span><strong>15% weight</strong>
+                    <span>💬 Active Citizen Reports & Alerts</span><strong>15% weight</strong>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button 
+                  className="criteria-refresh-btn" 
+                  disabled={isRefreshingCriteria}
+                  onClick={() => handleRefreshCriteria(selectedCriteria)}
+                  style={{ width: "100%" }}
+                >
+                  {isRefreshingCriteria ? "Fetching live updates..." : `Scan & Refresh ${selectedCriteria} status`}
+                </button>
+
+                {criteriaDetails ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px", flexGrow: 1, minHeight: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc", padding: "14px 18px", borderRadius: "8px", border: "1px solid var(--border-muted)" }}>
+                      <div>
+                        <span style={{ fontSize: "11px", color: "var(--text-dim)", textTransform: "uppercase" }}>City-wide Average</span>
+                        <div style={{ fontSize: "20px", fontWeight: 800 }}>
+                          {criteriaDetails.average_value}{criteriaDetails.unit}
+                        </div>
+                      </div>
+                      <span className={`kpi-status-label ${criteriaDetails.status_class}`} style={{ fontSize: "13px", fontWeight: 800 }}>
+                        {criteriaDetails.status}
+                      </span>
+                    </div>
+
+                    <h4 style={{ margin: "4px 0 0 0", fontSize: "13px", textTransform: "uppercase", color: "var(--text-dim)", letterSpacing: "0.5px" }}>
+                      Regional Scores (Nagpur City)
+                    </h4>
+
+                    <div className="criteria-regions-list">
+                      {criteriaDetails.regions && criteriaDetails.regions.map((reg) => (
+                        <div className="criteria-region-row" key={reg.ward_id}>
+                          <div>
+                            <span className="criteria-region-name">{reg.region_name}</span>
+                            <div className="criteria-region-details">
+                              {selectedCriteria === "traffic" && (
+                                <>
+                                  <span>🚗 Count: {reg.vehicle_count}</span>
+                                  <span>⚡ Speed: {reg.average_speed} km/h</span>
+                                </>
+                              )}
+                              {selectedCriteria === "water" && (
+                                <>
+                                  <span>🌊 Flow: {reg.flow_rate} L/s</span>
+                                  <span>📈 Cons: {reg.consumption} L/s</span>
+                                </>
+                              )}
+                              {selectedCriteria === "air-quality" && (
+                                <>
+                                  <span>pm2.5: {reg.pm25}</span>
+                                  <span>pm10: {reg.pm10}</span>
+                                </>
+                              )}
+                              {selectedCriteria === "sanitation" && (
+                                <>
+                                  <span>Status: {reg.collection_status}</span>
+                                  <span>Fill: {reg.value}%</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <span className="criteria-region-val" style={{ color: "var(--text-main)" }}>
+                            {reg.value}{criteriaDetails.unit}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", height: "150px", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                    Loading database status...
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </div>
+
     </div>
   );
 }
 
-// Helper colors for inline style mappings
+// Helper colors for inline style mappings (High-contrast for accessibility)
 const getSeverityColor = (sev) => {
   const s = sev?.toUpperCase();
-  if (s === "CRITICAL") return "#ef4444";
-  if (s === "HIGH") return "#f97316";
-  if (s === "MEDIUM") return "#eab308";
-  return "#10b981";
+  if (s === "CRITICAL") return "#b91c1c";
+  if (s === "HIGH") return "#c2410c";
+  if (s === "MEDIUM") return "#b45309";
+  return "#15803d";
 };
