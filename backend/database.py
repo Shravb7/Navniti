@@ -18,19 +18,16 @@ from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 # Load environment variables
 load_dotenv()
 
-# Select DB URL: Supabase/PostgreSQL (from DATABASE_URL) or default to SQLite
+# Select DB URL: Supabase/PostgreSQL (from DATABASE_URL)
 DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DB_URL")
 if not DATABASE_URL:
-    backend_dir = os.path.dirname(os.path.abspath(__file__))
-    DB_PATH = os.path.join(backend_dir, "navniti.db")
-    DATABASE_URL = f"sqlite:///{DB_PATH}"
+    raise ValueError(
+        "DATABASE_URL or SUPABASE_DB_URL is not set in environment variables. "
+        "Please create a .env file in the backend directory and configure your connection string."
+    )
 
-# Configure create_engine with sqlite compatibility options
-if DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-else:
-    # Postgres specific optimization (e.g. pool recycle)
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+# Configure create_engine with Postgres specific optimization (e.g. pool recycle)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -160,16 +157,6 @@ class Alert(Base):
 # DB initialization function
 def init_db(reset: bool = False):
     if reset:
-        # For Postgres, dropping tables requires drop_all, for SQLite we can just delete file
-        if DATABASE_URL.startswith("sqlite"):
-            # Simple delete
-            backend_dir = os.path.dirname(os.path.abspath(__file__))
-            DB_PATH = os.path.join(backend_dir, "navniti.db")
-            if os.path.exists(DB_PATH):
-                try:
-                    os.unlink(DB_PATH)
-                except Exception:
-                    pass
         Base.metadata.drop_all(bind=engine)
 
     Base.metadata.create_all(bind=engine)

@@ -14,8 +14,8 @@ def test_connection():
     print("=" * 60)
     
     if not db_url:
-        print("[WARNING] No DATABASE_URL or SUPABASE_DB_URL found in your .env file.")
-        print("          Currently falling back to local SQLite database: navniti.db")
+        print("[ERROR] No DATABASE_URL or SUPABASE_DB_URL found in your .env file.")
+        print("        Supabase/PostgreSQL connection string is required.")
         print("\nTo connect to Supabase:")
         print("1. Create a project at https://supabase.com")
         print("2. Copy the PostgreSQL connection string (Transaction Mode or Session Mode)")
